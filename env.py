@@ -158,7 +158,7 @@ class LeoGeoEnv(gymnasium.Env):
         self.leo1_users = len(self.leo_users.LEO_USER_COORDINATES)
 
         self.time_step = 0
-        self.max_steps = env_config.get("max_steps", 850)
+        self.max_steps = env_config.get("max_steps", 700)
 
         self.terminated = False
 
