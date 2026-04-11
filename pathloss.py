@@ -1,5 +1,5 @@
 import math
-import parameters
+# import parameters
 import numpy as np
 
 # GEO system parameters

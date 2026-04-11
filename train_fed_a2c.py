@@ -18,7 +18,7 @@ from fl.server import FederatedServer, ServerConfig
 SEED = 42
 NUM_CLIENTS = 10
 CLIENT_FRACTION = 0.4
-NUM_ROUNDS = 50
+NUM_ROUNDS = 10
 LOCAL_TIMESTEPS = 2000
 OUTPUT_DIR = Path("logs/federated_a2c")
 
@@ -122,8 +122,16 @@ def main():
             )
 
             # save round log incrementally
-            with open(OUTPUT_DIR / "round_logs.json", "w", encoding="utf-8") as f:
+            # with open(OUTPUT_DIR / "round_logs.json", "w", encoding="utf-8") as f:
+            #     json.dump(server.round_logs, f, indent=2)
+
+            tmp_path = OUTPUT_DIR / "round_logs.tmp.json"
+            final_path = OUTPUT_DIR / "round_logs.json"
+
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(server.round_logs, f, indent=2)
+
+            tmp_path.replace(final_path)
 
             # periodic global checkpoint
             if round_idx % 10 == 0:

@@ -1,0 +1,58 @@
+****Federate the A2C model, not the environment***
+
+The cleanest first version is:
+    every client gets a copy of the global A2C policy/value network
+    each client trains locally for a fixed number of rollout/update steps
+    server collects updated client weights
+    server aggregates them into a new global model
+    repeat
+
+For SB3 A2C, the key shared parameters are:
+    actor/policy network weights
+    critic/value network weights
+    feature extractor weights, if present
+
+
+***Recommended training loop***
+Round t
+Step 1: server builds selector state
+    For each client k, collect previous round stats.
+
+Step 2: selector chooses subset
+    Choose top M out of K.
+
+Step 3: broadcast global weights
+    Send current global A2C weights to selected clients.
+
+Step 4: local training
+    Each selected client trains for:
+    fixed timesteps, e.g. T_local = 2000, or
+    fixed rollout/update count
+
+Step 5: upload local updates
+    Each selected client returns:
+        new params
+        stats
+        cost estimates
+
+Step 6: aggregation
+    FedAvg on policy/value parameters.
+
+Step 7: global evaluation
+    Evaluate global model on a held-out set of client env seeds.
+
+Step 8: selector reward
+    Use improvement-vs-cost reward.
+
+Step 9: update selector policy
+    Train the scheduler PPO agent.
+
+
+*** Overall Idea***
+Keep LeoGeoEnv as the local RL environment
+Turn each heterogeneous env generator into a federated client
+Keep local learner = SB3 A2C
+Introduce a central FL server using FedAvg
+Train a server-side PPO selector to pick the best clients each round
+Define selector reward using global reward improvement minus train/comm/interference cost
+Use the environment’s existing KPI outputs as the quality signals for client selection
