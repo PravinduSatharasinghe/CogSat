@@ -2,6 +2,9 @@ import json
 import time
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("TkAgg")
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -50,6 +53,7 @@ def load_logs():
 
 fig, axes = plt.subplots(3, 2, figsize=(12, 10))
 fig.suptitle("Federated A2C Live Training Monitor", fontsize=14)
+plt.show(block=False)
 
 
 def update_plot():

@@ -40,9 +40,15 @@ class MockTurtle:
     def shape(self, x): pass
     def shapesize(self, x): pass
     
-    def color(self, c=None): 
+    # def color(self, c=None):
+    #     if c is not None:
+    #         self._color = c
+    #     return self._color
+
+    def color(self, c=None):
         if c is not None:
             self._color = c
+            self._fillcolor = c  # 🔥 critical fix
         return self._color
 
     def fillcolor(self, c=None): 
@@ -96,7 +102,8 @@ class LeoGeoEnv(gymnasium.Env):
             env_config = {}
         
         # GUI Switch Logic
-        self.enable_gui = env_config.get("enable_gui", False)
+        self.enable_gui = env_config.get("enable_gui", True)
+        self.enable_render = env_config.get("enable_render", True)
         
         if self.enable_gui:
             self.turtle_provider = turtle
@@ -148,9 +155,10 @@ class LeoGeoEnv(gymnasium.Env):
         # LEO users
         # Pass turtle provider
         self.leo_users = LeoUserConfig(l1_all_turtles=self.leo1.all_turtles, turtle_provider=self.turtle_class)
-        self.leo1_users = len(self.leo_users.LEO_A_USER_COORDINATES)
+        self.leo1_users = len(self.leo_users.LEO_USER_COORDINATES)
 
         self.time_step = 0
+        self.max_steps = env_config.get("max_steps", 850)
 
         self.terminated = False
 
@@ -355,12 +363,20 @@ class LeoGeoEnv(gymnasium.Env):
             }
         }
 
-        truncated = False
-        return observation, reward, self.terminated, truncated, info
+        if self.enable_gui and self.enable_render:
+            self.render()
+
+        terminated = False
+        truncated = self.time_step >= self.max_steps
+        return observation, reward, terminated, truncated, info
+
+    # def render(self):
+    #     # Implement viz
+    #     pass
 
     def render(self):
-        # Implement viz
-        pass
+        if self.enable_gui and hasattr(self, "screen"):
+            self.screen.update()
 
 
 

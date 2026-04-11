@@ -18,7 +18,7 @@ from fl.server import FederatedServer, ServerConfig
 SEED = 42
 NUM_CLIENTS = 10
 CLIENT_FRACTION = 0.4
-NUM_ROUNDS = 10
+NUM_ROUNDS = 20
 LOCAL_TIMESTEPS = 2000
 OUTPUT_DIR = Path("logs/federated_a2c")
 
