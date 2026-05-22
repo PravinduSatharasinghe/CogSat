@@ -10,7 +10,7 @@ import numpy as np
 import torch as th
 from stable_baselines3 import A2C
 
-from env import LeoGeoEnv
+from geoleo_env.env import LeoGeoEnv
 
 
 @dataclass
@@ -137,7 +137,15 @@ class FederatedServer:
             update = client.train_local()
             client_updates.append(update)
 
-        new_global_params = self.aggregate_fedavg(client_updates)
+        if self.config.aggregation == "fedavg":
+            new_global_params = self.aggregate_fedavg(client_updates)
+        elif self.config.aggregation == "fedprox":
+            new_global_params = self.aggregate_fedprox(client_updates)
+        elif self.config.aggregation == "fednova":
+            new_global_params = self.aggregate_fednova(client_updates)
+        else:
+            raise ValueError(f"Unknown aggregation method: {self.config.aggregation}")
+
         self.set_global_parameters(new_global_params)
 
         global_eval = self.evaluate_global(num_steps=300)
@@ -196,3 +204,56 @@ class FederatedServer:
 
     def close(self):
         self.eval_env.close()
+
+    def aggregate_fedprox(self, client_updates):
+        """
+        FedProx aggregation.
+        In practice, aggregation is FedAvg-style, while the proximal effect
+        should ideally be applied during local training.
+
+        This version is a server-side FedProx-compatible baseline:
+        weighted parameter averaging after local updates.
+        """
+        return self.aggregate_fedavg(client_updates)
+
+    def aggregate_fednova(self, client_updates):
+        """
+        FedNova-style normalized aggregation.
+        Normalizes each client update by its parameter delta norm so large
+        local drifts do not dominate aggregation.
+        """
+        if not client_updates:
+            raise ValueError("No client updates provided for FedNova aggregation.")
+
+        global_params = self.get_global_parameters()
+
+        normalized_updates = {}
+        total_weight = 0.0
+
+        for update in client_updates:
+            client_params = update["parameters"]
+            num_steps = float(update["num_steps"])
+
+            # Compute update norm
+            sq_sum = 0.0
+            for k in global_params.keys():
+                delta = client_params[k].float() - global_params[k].float()
+                sq_sum += float(th.sum(delta * delta).item())
+
+            delta_norm = max(np.sqrt(sq_sum), 1e-12)
+            weight = num_steps / delta_norm
+            total_weight += weight
+
+            for k in global_params.keys():
+                delta = client_params[k].float() - global_params[k].float()
+                if k not in normalized_updates:
+                    normalized_updates[k] = weight * delta
+                else:
+                    normalized_updates[k] += weight * delta
+
+        new_params = {}
+        for k in global_params.keys():
+            new_params[k] = global_params[k].float() + normalized_updates[k] / total_weight
+
+        return new_params
+

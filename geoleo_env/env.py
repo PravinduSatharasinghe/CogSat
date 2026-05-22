@@ -6,12 +6,12 @@ import numpy as np
 import random
 import math
 
-import geointeference
-import leointeference
-import pathloss
-from leo import *
-from geo import *
-from leouser import *
+import geoleo_env.geointeference as geointeference
+import geoleo_env.leointeference as leointeference
+import geoleo_env.pathloss as pathloss
+from geoleo_env.leo import *
+from geoleo_env.geo import *
+from geoleo_env.leouser import *
 import turtle
 
 # 1 pixel = 5 km

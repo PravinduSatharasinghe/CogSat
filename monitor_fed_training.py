@@ -1,3 +1,5 @@
+# monitor_fed_training.py
+
 import json
 import time
 from pathlib import Path
@@ -8,7 +10,10 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-LOG_PATH = Path("logs/federated_a2c/round_logs.json")
+# LOG_PATH = Path("logs/FedAvg/round_logs.json")
+LOG_PATH = Path("logs/FedAvg_DRL/round_logs.json")
+# LOG_PATH = Path("logs/FedProx/round_logs.json")
+
 REFRESH_SECONDS = 3
 
 plt.rcParams.update({
@@ -51,7 +56,7 @@ def load_logs():
         return []
 
 
-fig, axes = plt.subplots(3, 2, figsize=(12, 10))
+fig, axes = plt.subplots(4, 2, figsize=(12, 13))
 fig.suptitle("Federated A2C Live Training Monitor", fontsize=14)
 plt.show(block=False)
 
@@ -86,38 +91,43 @@ def update_plot():
     axes[0, 0].grid(True, linestyle="--", alpha=0.5)
     axes[0, 0].legend()
 
-    axes[0, 1].plot(rounds, leo_cap, alpha=0.4, label="LEO")
-    axes[0, 1].plot(rounds, leo_s, linewidth=2)
-    axes[0, 1].plot(rounds, geo_cap, alpha=0.4, label="GEO")
-    axes[0, 1].plot(rounds, geo_s, linewidth=2)
-    axes[0, 1].set_title("Capacities")
+    axes[0, 1].plot(rounds, leo_cap, alpha=0.4, color="tab:blue", label="Raw")
+    axes[0, 1].plot(rounds, leo_s, linewidth=2, color="tab:blue", label="Smoothed")
+    axes[0, 1].set_title("LEO Capacity")
     axes[0, 1].set_xlabel("Round")
     axes[0, 1].grid(True, linestyle="--", alpha=0.5)
     axes[0, 1].legend()
 
-    axes[1, 0].plot(rounds, interference, alpha=0.4, label="Raw")
-    axes[1, 0].plot(rounds, int_s, linewidth=2, label="Smoothed")
-    axes[1, 0].set_yscale("log")
-    axes[1, 0].set_title("LEO→GEO Interference")
+    axes[1, 0].plot(rounds, geo_cap, alpha=0.4, color="tab:orange", label="Raw")
+    axes[1, 0].plot(rounds, geo_s, linewidth=2, color="tab:orange", label="Smoothed")
+    axes[1, 0].set_title("GEO Capacity")
     axes[1, 0].set_xlabel("Round")
-    axes[1, 0].grid(True, which="both", linestyle="--", alpha=0.5)
+    axes[1, 0].grid(True, linestyle="--", alpha=0.5)
     axes[1, 0].legend()
 
-    axes[1, 1].plot(rounds, param_delta, alpha=0.4, label="Raw")
-    axes[1, 1].plot(rounds, delta_s, linewidth=2, label="Smoothed")
-    axes[1, 1].set_title("Parameter Delta Norm")
+    axes[1, 1].plot(rounds, interference, alpha=0.4, label="Raw")
+    axes[1, 1].plot(rounds, int_s, linewidth=2, label="Smoothed")
+    axes[1, 1].set_yscale("log")
+    axes[1, 1].set_title("LEO→GEO Interference")
     axes[1, 1].set_xlabel("Round")
-    axes[1, 1].grid(True, linestyle="--", alpha=0.5)
+    axes[1, 1].grid(True, which="both", linestyle="--", alpha=0.5)
     axes[1, 1].legend()
 
-    axes[2, 0].plot(rounds, train_time, alpha=0.4, label="Raw")
-    axes[2, 0].plot(rounds, time_s, linewidth=2, label="Smoothed")
-    axes[2, 0].set_title("Avg Client Train Time")
+    axes[2, 0].plot(rounds, param_delta, alpha=0.4, label="Raw")
+    axes[2, 0].plot(rounds, delta_s, linewidth=2, label="Smoothed")
+    axes[2, 0].set_title("Parameter Delta Norm")
     axes[2, 0].set_xlabel("Round")
     axes[2, 0].grid(True, linestyle="--", alpha=0.5)
     axes[2, 0].legend()
 
-    axes[2, 1].axis("off")
+    axes[2, 1].plot(rounds, train_time, alpha=0.4, label="Raw")
+    axes[2, 1].plot(rounds, time_s, linewidth=2, label="Smoothed")
+    axes[2, 1].set_title("Avg Client Train Time")
+    axes[2, 1].set_xlabel("Round")
+    axes[2, 1].grid(True, linestyle="--", alpha=0.5)
+    axes[2, 1].legend()
+
+    axes[3, 0].axis("off")
     last = logs[-1]
     summary = (
         f"Last round: {last['round_idx']}\n"
@@ -128,7 +138,9 @@ def update_plot():
         f"Interference: {last['global_eval_avg_leo_to_geo_interference']:.3e}\n"
         f"Param delta norm: {last['avg_param_delta_norm']:.6f}"
     )
-    axes[2, 1].text(0.02, 0.98, summary, va="top", ha="left", fontsize=10)
+    axes[3, 0].text(0.02, 0.98, summary, va="top", ha="left", fontsize=10)
+
+    axes[3, 1].axis("off")
 
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     fig.canvas.draw()

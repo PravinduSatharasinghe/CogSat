@@ -1,5 +1,5 @@
 import turtle
-import pathloss, geo, leo
+import geoleo_env.pathloss as pathloss, geoleo_env.geo as geo, geoleo_env.leo as leo
 import math
 import numpy as np
 

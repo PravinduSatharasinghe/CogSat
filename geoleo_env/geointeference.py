@@ -1,4 +1,4 @@
-import pathloss, geo, leo, math
+import geoleo_env.pathloss as pathloss, geoleo_env.geo as geo, geoleo_env.leo as leo, math
 
 
 

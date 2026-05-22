@@ -1,8 +1,7 @@
-# train_fed_a2c.py
+# FedAvg.py
 from __future__ import annotations
 
 import json
-import os
 import random
 from pathlib import Path
 
@@ -10,17 +9,16 @@ import gymnasium
 import numpy as np
 import torch as th
 
-from env import LeoGeoEnv
 from fl.client import ClientConfig, FederatedClient
 from fl.server import FederatedServer, ServerConfig
 
 
 SEED = 42
-NUM_CLIENTS = 15
+NUM_CLIENTS = 20
 CLIENT_FRACTION = 0.5
-NUM_ROUNDS = 20
+NUM_ROUNDS = 200
 LOCAL_TIMESTEPS = 2000
-OUTPUT_DIR = Path("logs/federated_a2c")
+OUTPUT_DIR = Path("logs/FedAvg")
 
 
 def set_global_seed(seed: int):
@@ -33,7 +31,7 @@ def register_env():
     try:
         gymnasium.register(
             id="LeoGeoEnv-v3.1",
-            entry_point="env:LeoGeoEnv",
+            entry_point="geoleo_env.env:LeoGeoEnv",
         )
     except Exception:
         # safe if already registered
@@ -50,6 +48,7 @@ def make_client_env_config(client_id: int) -> dict:
         "angular_rate": 0.005,
         "speed": 1.508,
         "enable_gui": False,
+        "max_steps": 850,
     }
 
 
@@ -72,6 +71,14 @@ def build_clients(num_clients: int) -> list[FederatedClient]:
     return clients
 
 
+def save_round_logs_atomic(logs, output_dir: Path):
+    tmp_path = output_dir / "round_logs.tmp.json"
+    final_path = output_dir / "round_logs.json"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(logs, f, indent=2)
+    tmp_path.replace(final_path)
+
+
 def main():
     set_global_seed(SEED)
     register_env()
@@ -92,7 +99,8 @@ def main():
                 "angular_rate": 0.005,
                 "speed": 1.508,
                 "enable_gui": False,
-            }
+                "max_steps": 850,
+            },
         )
     )
 
@@ -101,7 +109,6 @@ def main():
         print(f"NUM_CLIENTS={NUM_CLIENTS}, CLIENT_FRACTION={CLIENT_FRACTION}, NUM_ROUNDS={NUM_ROUNDS}")
 
         for round_idx in range(1, NUM_ROUNDS + 1):
-            # Baseline selector: random
             selected_clients = server.select_clients_random(
                 clients=clients,
                 fraction=CLIENT_FRACTION,
@@ -112,32 +119,23 @@ def main():
                 selected_clients=selected_clients,
             )
 
+            round_log["method"] = "FedAvg + random selection"
+
             print(
                 f"[Round {round_idx:03d}] "
                 f"selected={round_log['selected_client_ids']} | "
                 f"global_reward={round_log['global_eval_mean_reward']:.6f} | "
                 f"leo_cap={round_log['global_eval_avg_leo_capacity']:.6f} | "
                 f"geo_cap={round_log['global_eval_avg_geo_capacity']:.6f} | "
-                f"leo_to_geo_int={round_log['global_eval_avg_leo_to_geo_interference']:.6e}"
+                f"leo_to_geo_int={round_log['global_eval_avg_leo_to_geo_interference']:.6e} | "
+                f"delta={round_log['avg_param_delta_norm']:.6f}"
             )
 
-            # save round log incrementally
-            # with open(OUTPUT_DIR / "round_logs.json", "w", encoding="utf-8") as f:
-            #     json.dump(server.round_logs, f, indent=2)
+            save_round_logs_atomic(server.round_logs, OUTPUT_DIR)
 
-            tmp_path = OUTPUT_DIR / "round_logs.tmp.json"
-            final_path = OUTPUT_DIR / "round_logs.json"
-
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(server.round_logs, f, indent=2)
-
-            tmp_path.replace(final_path)
-
-            # periodic global checkpoint
             if round_idx % 10 == 0:
                 server.global_model.save(str(OUTPUT_DIR / f"global_model_round_{round_idx}.zip"))
 
-        # final save
         server.global_model.save(str(OUTPUT_DIR / "global_model_final.zip"))
         print("Federated training complete.")
 

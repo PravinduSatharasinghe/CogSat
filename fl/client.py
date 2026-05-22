@@ -12,7 +12,7 @@ import torch as th
 from stable_baselines3 import A2C
 from stable_baselines3.common.monitor import Monitor
 
-from env import LeoGeoEnv
+from geoleo_env.env import LeoGeoEnv
 
 
 @dataclass
